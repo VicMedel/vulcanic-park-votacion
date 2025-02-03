@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🦖 Votación - Volcanic Park 🦕</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f4f4f9;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .theme {
+      margin-top: 20px;
+      padding: 15px;
+      background: #ffcc80;
+      border-radius: 8px;
+      font-weight: bold;
+      color: #d84315;
+    }
+    .activity {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 10px 0;
+      padding: 10px;
+      background: #fff3e0;
+      border-radius: 8px;
+    }
+    .vote-button {
+      background-color: #ff7043;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .vote-button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .results {
+      margin-top: 20px;
+      font-weight: bold;
+      background: #ffee58;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .voters-list {
+      margin-top: 20px;
+      background: #dcedc8;
+      padding: 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🦖 Vota por tus actividades favoritas en Volcanic Park 🦕</h1>
+    <p>Selecciona hasta 5 actividades. La primera vale 5 puntos, la última 1 punto.</p>
+  </header>
+
+  <div class="container">
+    <form id="nameForm">
+      <label for="name">Nombre:</label>
+      <input type="text" id="name" placeholder="Escribe tu nombre" required>
+      <button type="submit">Iniciar Votación</button>
+    </form>
+
+    <div id="activities" style="display: none;"></div>
+    <p id="voteMessage"></p>
+    <div class="results" id="results"></div>
+    <div class="voters-list" id="votersList"></div>
+  </div>
+
+  <script>
+    const themes = {
+      "🦖 Volcanic Extremo (Aventura y Adrenalina)": ["Tirolesas extremas", "Muro de escalar", "Circuito de habilidades", "Puente tibetano", "Eurobungy", "Puente colgante"],
+      "🌋 Volcanic Recreativo (Diversión para todos)": ["Paseo en lancha", "El árbol de los sueños", "Museo Volcán Pirata", "Deslizador de montaña", "Miradores escénicos", "Laberinto"]
+    };
+
+    let votesRemaining = 5;
+    let voteValues = [5, 4, 3, 2, 1];
+    let userVotes = {};
+    let voters = JSON.parse(localStorage.getItem("voters")) || [];
+    let results = JSON.parse(localStorage.getItem("results")) || {};
+
+    document.getElementById("nameForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      let userName = document.getElementById("name").value.trim();
+      if (voters.includes(userName)) {
+        alert("Ya has votado.");
+        return;
+      }
+      voters.push(userName);
+      localStorage.setItem("voters", JSON.stringify(voters));
+      document.getElementById("activities").style.display = "block";
+      renderActivities();
+      updateVotersList();
+    });
+
+    function renderActivities() {
+      const container = document.getElementById("activities");
+      container.innerHTML = "";
+      
+      Object.keys(themes).forEach(theme => {
+        const themeDiv = document.createElement("div");
+        themeDiv.className = "theme";
+        themeDiv.textContent = theme;
+        container.appendChild(themeDiv);
+
+        themes[theme].forEach(activity => {
+          const div = document.createElement("div");
+          div.className = "activity";
+          div.innerHTML = `
+            <span>${activity}</span>
+            <button class="vote-button" data-id="${activity}">Votar</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+
+      addVoteListeners();
+    }
+
+    function addVoteListeners() {
+      document.querySelectorAll(".vote-button").forEach(button => {
+        button.addEventListener("click", handleVote);
+      });
+    }
+
+    function handleVote(e) {
+      if (votesRemaining > 0) {
+        const activity = e.target.dataset.id;
+        const points = voteValues[voteValues.length - votesRemaining];
+        results[activity] = (results[activity] || 0) + points;
+        votesRemaining--;
+        e.target.textContent = `Votado (${points} puntos)`;
+        e.target.disabled = true;
+        updateVoteMessage();
+        updateResults();
+        localStorage.setItem("results", JSON.stringify(results));
+      } else {
+        alert("No tienes más votos.");
+      }
+    }
+
+    function updateVoteMessage() {
+      document.getElementById("voteMessage").textContent = votesRemaining > 0 ? `Te quedan ${votesRemaining} votos.` : "¡Gracias por votar!";
+    }
+
+    function updateResults() {
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "<h2>🏆 Resultados en Tiempo Real</h2>";
+      Object.keys(results).sort((a, b) => results[b] - results[a]).forEach(activity => {
+        resultsDiv.innerHTML += `<p>${activity}: ${results[activity]} puntos</p>`;
+      });
+    }
+
+    function updateVotersList() {
+      document.getElementById("votersList").innerHTML = "<h3>📝 Lista de Votantes</h3><p>" + voters.join(", ") + "</p>";
+    }
+
+    updateResults();
+    updateVotersList();
+  </script>
+</body>
+</html>
+

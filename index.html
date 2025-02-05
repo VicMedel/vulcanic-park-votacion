@@ -127,7 +127,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-    import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+    import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
@@ -352,6 +352,11 @@
         dino.velocity = -dino.jumpPower;
         dino.isJumping = true;
       }
+    });
+
+    // Asegurar que el botón de juego funcione
+    document.getElementById("restartGame").addEventListener("click", () => {
+      startDinoGame();
     });
   </script>
 </body>

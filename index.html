@@ -246,9 +246,11 @@
         const activity = e.target.dataset.id;
         const points = 6 - votesRemaining;
 
+        // Actualizar votos en Firebase
         const voteRef = ref(db, "votes/" + activity);
-        update(voteRef, {
-          puntos: (userVotes[activity] || 0) + points
+        get(voteRef).then(snapshot => {
+          const currentPoints = snapshot.val()?.puntos || 0;
+          update(voteRef, { puntos: currentPoints + points });
         });
 
         userVotes[activity] = (userVotes[activity] || 0) + points;

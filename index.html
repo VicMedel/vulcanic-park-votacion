@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🦖 Votación - Volcanic Park 🦕</title>
+  <title>🦖 Volcanic Park - ¡Vota por tus actividades favoritas! 🦕</title>
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background-color: #1e1e2e;
-      color: #ffcc00;
+      background: linear-gradient(135deg, #ff7f50, #8a2be2);
+      color: #fff;
       text-align: center;
       margin: 0;
       padding: 0;
@@ -16,24 +16,34 @@
     }
     header {
       padding: 20px;
-      background: linear-gradient(135deg, #ff8800, #ffcc00);
+      background: linear-gradient(135deg, #ff6f91, #d62ad0);
       color: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin: 0;
+    }
+    p {
+      font-size: 1.2rem;
+      margin: 10px 0;
     }
     .container {
       max-width: 800px;
       margin: 20px auto;
-      background: #2e2e48;
+      background: #fff3e0;
       padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(255, 204, 0, 0.3);
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      color: #333;
     }
     .theme {
       margin-top: 20px;
       padding: 15px;
-      background: #ff8800;
+      background: #ffcc80;
       border-radius: 8px;
       font-weight: bold;
-      color: #fff;
+      color: #d84315;
     }
     .activity {
       display: flex;
@@ -41,13 +51,13 @@
       justify-content: space-between;
       margin: 10px 0;
       padding: 10px;
-      background: #333354;
+      background: #ffe0b2;
       border-radius: 8px;
-      color: #fff;
+      color: #333;
     }
     .vote-button {
-      background-color: #ffcc00;
-      color: #1e1e2e;
+      background-color: #ff7043;
+      color: white;
       border: none;
       padding: 5px 10px;
       border-radius: 5px;
@@ -64,17 +74,10 @@
     .results {
       margin-top: 20px;
       font-weight: bold;
-      background: #444466;
+      background: #ffee58;
       padding: 10px;
       border-radius: 8px;
-      color: #ffcc00;
-    }
-    .voters-list {
-      margin-top: 20px;
-      background: #ff8800;
-      padding: 10px;
-      border-radius: 8px;
-      color: #fff;
+      color: #333;
     }
     .progress-bar {
       background: #ddd;
@@ -85,44 +88,48 @@
     }
     .progress-fill {
       height: 100%;
-      background: #ffcc00;
+      background: #ff7043;
       border-radius: 10px;
       transition: width 0.5s;
     }
-    canvas {
-      display: none;
-      margin: 20px auto;
-      background: #1e1e2e;
-      border: 2px solid #ffcc00;
+    .voters-list {
+      margin-top: 20px;
+      background: #dcedc8;
+      padding: 10px;
+      border-radius: 8px;
+      color: #333;
     }
-    button#restartGame {
+    button#startVote {
       margin-top: 20px;
       padding: 10px 20px;
-      background: #ff8800;
-      color: #fff;
+      background: #ff7043;
+      color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 1rem;
+      transition: transform 0.2s ease-in-out;
+    }
+    button#startVote:hover {
+      transform: scale(1.1);
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>🦖 Vota por tus actividades favoritas en Volcanic Park 🦕</h1>
-    <p>Selecciona hasta 5 actividades. La primera vale 5 puntos, la última 1 punto.</p>
+    <h1>🦖 Volcanic Park - ¡Vota por tus actividades favoritas! 🦕</h1>
+    <p>Selecciona hasta 5 actividades. La primera vale 5 puntos, la segunda 4, y así sucesivamente. 🏆✨</p>
   </header>
   <div class="container">
     <form id="nameForm">
-      <label for="name">Nombre:</label>
+      <label for="name">Nombre: 👤</label>
       <input type="text" id="name" placeholder="Escribe tu nombre" required>
-      <button type="submit">Iniciar Votación</button>
+      <button type="submit" id="startVote">Iniciar Votación 🚀</button>
     </form>
     <div id="activities" style="display: none;"></div>
     <p id="voteMessage"></p>
-    <div class="results" id="results"></div>
-    <div class="voters-list" id="votersList"></div>
-    <canvas id="dinoGame" width="600" height="200"></canvas>
-    <button id="restartGame" onclick="startDinoGame()">Jugar con Dinosaurios</button>
+    <div class="results" id="results"><h2>🏆 Ranking en Tiempo Real 📊</h2></div>
+    <div class="voters-list" id="votersList"><h3>📝 Lista de Votantes 🙋‍♂️🙋‍♀️</h3></div>
   </div>
 
   <script type="module">
@@ -147,12 +154,12 @@
     let userName = "";
 
     const themes = {
-      "🌋 Volcanic Extremo (Aventura y Adrenalina)": ["Tirolesas extremas", "Muro de escalar", "Circuito de habilidades", "Puente tibetano", "Eurobungy", "Puente colgante"],
-      "🎢 Volcanic Recreativo (Diversión para todos)": ["Paseo en lancha", "El árbol de los sueños", "Museo Volcán Pirata", "Deslizador de montaña", "Miradores escénicos", "Laberinto"],
-      "TRACTOR Volcanic Sobre Ruedas (Aventura en vehículos)": ["Go Karts", "Karts todoterreno", "Tren Jurásico", "Hummers 4x4"],
-      "🌿 Volcanic Natura (Naturaleza y vida animal)": ["Granja temática", "Gran castillo de las aves", "Pirámide herpetario", "Refugio de venados nobles"],
-      "🎠 Volcanic Kids (Diversión para niños)": ["Mini karts", "Boat kids", "Barco Vulcano-Pirata", "Dino karts", "Tirolesa Volcanes de México"],
-      "🦕 Volcanic Experiencias (Dinosaurios y Aventuras)": ["Dinosaurios animatrónicos", "Zona de fósiles", "Deslizador de montaña", "Miradores escénicos", "Hotel Volcanic", "Senderismo guiado", "Espectáculos temáticos"]
+      "🌋 Volcanic Extremo (Aventura y Adrenalina) 🏔️": ["Tirolesas extremas", "Muro de escalar", "Circuito de habilidades", "Puente tibetano", "Eurobungy", "Puente colgante"],
+      "🎢 Volcanic Recreativo (Diversión para todos) 🎠": ["Paseo en lancha", "El árbol de los sueños", "Museo Volcán Pirata", "Deslizador de montaña", "Miradores escénicos", "Laberinto"],
+      "TRACTOR Volcanic Sobre Ruedas (Aventura en vehículos) 🚜": ["Go Karts", "Karts todoterreno", "Tren Jurásico", "Hummers 4x4"],
+      "🌿 Volcanic Natura (Naturaleza y vida animal) 🐾": ["Granja temática", "Gran castillo de las aves", "Pirámide herpetario", "Refugio de venados nobles"],
+      "🎠 Volcanic Kids (Diversión para niños) 👶": ["Mini karts", "Boat kids", "Barco Vulcano-Pirata", "Dino karts", "Tirolesa Volcanes de México"],
+      "🦕 Volcanic Experiencias (Dinosaurios y Aventuras) 🌟": ["Dinosaurios animatrónicos", "Zona de fósiles", "Deslizador de montaña", "Miradores escénicos", "Hotel Volcanic", "Senderismo guiado", "Espectáculos temáticos"]
     };
 
     document.getElementById("nameForm").addEventListener("submit", async function (e) {
@@ -160,7 +167,7 @@
       userName = document.getElementById("name").value.trim();
 
       if (!userName) {
-        alert("Por favor, ingresa tu nombre.");
+        alert("Por favor, ingresa tu nombre. 😅");
         return;
       }
 
@@ -168,7 +175,7 @@
       const snapshot = await get(userRef);
 
       if (snapshot.exists()) {
-        alert("¡Ya has votado!");
+        alert("¡Ya has votado! 🗳️");
       } else {
         await set(userRef, { voted: true });
         document.getElementById("activities").style.display = "block";
@@ -192,7 +199,7 @@
           div.className = "activity";
           div.innerHTML = `
             <span>${activity}</span>
-            <button class="vote-button" data-id="${activity}">Votar</button>
+            <button class="vote-button" data-id="${activity}">Votar 🗳️</button>
           `;
           container.appendChild(div);
         });
@@ -220,19 +227,19 @@
         userVotes[activity] = (userVotes[activity] || 0) + points;
         votesRemaining--;
 
-        e.target.textContent = `Votado (${points} puntos)`;
+        e.target.textContent = `Votado (${points} puntos) ✅`;
         e.target.disabled = true;
 
         updateVoteMessage();
         updateResults();
       } else {
-        alert("No tienes más votos.");
+        alert("No tienes más votos. 😢");
       }
     }
 
     function updateVoteMessage() {
       document.getElementById("voteMessage").textContent =
-        votesRemaining > 0 ? `Te quedan ${votesRemaining} votos.` : "¡Gracias por votar!";
+        votesRemaining > 0 ? `Te quedan ${votesRemaining} votos. 🗳️` : "¡Gracias por votar! 🎉";
     }
 
     function updateResults() {
@@ -241,7 +248,7 @@
         const data = snapshot.val();
         if (!data) return;
 
-        let resultsHTML = "<h2>🏆 Ranking en Tiempo Real</h2>";
+        let resultsHTML = "<h2>🏆 Ranking en Tiempo Real 📊</h2>";
         const totalPoints = Math.max(...Object.values(data).map(v => v.puntos));
 
         Object.keys(data)
@@ -266,7 +273,7 @@
       const votersRef = ref(db, "voters");
       onValue(votersRef, (snapshot) => {
         const data = snapshot.val();
-        let votersHTML = "<h3>📝 Lista de Personas que Han Votado</h3><ul>";
+        let votersHTML = "<h3>📝 Lista de Votantes 🙋‍♂️🙋‍♀️</h3><ul>";
         if (data) {
           Object.keys(data).forEach(voter => {
             votersHTML += `<li>✅ ${voter}</li>`;
@@ -276,88 +283,6 @@
         document.getElementById("votersList").innerHTML = votersHTML;
       });
     }
-
-    // Juego de dinosaurio
-    const canvas = document.getElementById("dinoGame");
-    const ctx = canvas.getContext("2d");
-
-    let dino = { x: 50, y: 150, width: 20, height: 20, gravity: 2, jumpPower: 20, velocity: 0, isJumping: false };
-    let obstacles = [];
-    let score = 0;
-    let gameInterval;
-
-    function startDinoGame() {
-      canvas.style.display = "block";
-      resetGame();
-      gameInterval = setInterval(updateGame, 50);
-    }
-
-    function resetGame() {
-      dino.y = 150;
-      dino.velocity = 0;
-      obstacles = [];
-      score = 0;
-    }
-
-    function updateGame() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Dibuja al dinosaurio
-      ctx.fillStyle = "#ffcc00";
-      ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
-
-      // Gravedad
-      dino.velocity += dino.gravity;
-      dino.y += dino.velocity;
-
-      // Límite del suelo
-      if (dino.y > 150) {
-        dino.y = 150;
-        dino.isJumping = false;
-      }
-
-      // Genera obstáculos
-      if (Math.random() < 0.02) {
-        obstacles.push({ x: canvas.width, y: 170, width: 20, height: 20 });
-      }
-
-      // Dibuja y mueve obstáculos
-      ctx.fillStyle = "#ff8800";
-      obstacles.forEach(obstacle => {
-        obstacle.x -= 5;
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-
-        // Colisión
-        if (
-          dino.x < obstacle.x + obstacle.width &&
-          dino.x + dino.width > obstacle.x &&
-          dino.y < obstacle.y + obstacle.height &&
-          dino.y + dino.height > obstacle.y
-        ) {
-          clearInterval(gameInterval);
-          alert("¡Perdiste! Puntaje: " + score);
-          resetGame();
-        }
-      });
-
-      // Incrementa puntaje
-      score++;
-      ctx.fillStyle = "#fff";
-      ctx.font = "16px Arial";
-      ctx.fillText("Puntaje: " + score, 10, 20);
-    }
-
-    document.addEventListener("keydown", () => {
-      if (!dino.isJumping) {
-        dino.velocity = -dino.jumpPower;
-        dino.isJumping = true;
-      }
-    });
-
-    // Asegurar que el botón de juego funcione
-    document.getElementById("restartGame").addEventListener("click", () => {
-      startDinoGame();
-    });
   </script>
 </body>
 </html>

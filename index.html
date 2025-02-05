@@ -62,6 +62,7 @@
       border-radius: 8px;
       color: #333;
       transition: transform 0.3s ease-in-out;
+      position: relative;
     }
     .activity:hover {
       transform: scale(1.05);
@@ -74,6 +75,7 @@
       border-radius: 5px;
       cursor: pointer;
       transition: transform 0.2s ease-in-out;
+      position: relative;
     }
     .vote-button:hover {
       transform: scale(1.1);
@@ -81,6 +83,16 @@
     .vote-button:disabled {
       background-color: #ccc;
       cursor: not-allowed;
+    }
+    .checkmark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      color: green;
+      opacity: 0;
+      transition: opacity 0.5s;
     }
     .results {
       margin-top: 20px;
@@ -154,14 +166,14 @@
       <button type="submit" id="startVote"><i class="fas fa-vote-yea"></i> Iniciar Votación</button>
     </form>
     <div id="activities" style="display: none;"></div>
-    <p id="voteMessage"></p>
+    <p id="voteMessage">Te quedan <span id="votesRemaining">5</span> votos. 🗳️</p>
     <div class="results" id="results"><h2><i class="fas fa-trophy"></i> Ranking en Tiempo Real 📊</h2></div>
     <div class="voters-list" id="votersList"><h3><i class="fas fa-users"></i> Lista de Votantes 🙋‍♂️🙋‍♀️</h3></div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-    import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+    import { getDatabase, ref, update, onValue, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
@@ -177,7 +189,7 @@
     const db = getDatabase(app);
 
     let votesRemaining = 5;
-    let userVotes = {};
+    let userVotes = [];
     let userName = "";
 
     const themes = {
@@ -204,7 +216,7 @@
       if (snapshot.exists()) {
         alert("¡Ya has votado! 🗳️");
       } else {
-        await set(userRef, { voted: true });
+        await update(userRef, { voted: true });
         document.getElementById("activities").style.display = "block";
         renderActivities();
         updateVotersList();
@@ -227,6 +239,7 @@
           div.innerHTML = `
             <span>${activity}</span>
             <button class="vote-button" data-id="${activity}">Votar 🗳️</button>
+            <span class="checkmark">✅</span>
           `;
           container.appendChild(div);
         });
@@ -242,33 +255,54 @@
     }
 
     function handleVote(e) {
-      if (votesRemaining > 0) {
-        const activity = e.target.dataset.id;
-        const points = 6 - votesRemaining;
-
-        // Actualizar votos en Firebase
-        const voteRef = ref(db, "votes/" + activity);
-        get(voteRef).then(snapshot => {
-          const currentPoints = snapshot.val()?.puntos || 0;
-          update(voteRef, { puntos: currentPoints + points });
-        });
-
-        userVotes[activity] = (userVotes[activity] || 0) + points;
-        votesRemaining--;
-
-        e.target.textContent = `Votado (${points} puntos) ✅`;
-        e.target.disabled = true;
-
-        updateVoteMessage();
-        updateResults();
-      } else {
-        alert("No tienes más votos. 😢");
+      if (votesRemaining <= 0) {
+        alert("No tienes más votos disponibles.");
+        return;
       }
-    }
 
-    function updateVoteMessage() {
-      document.getElementById("voteMessage").textContent =
-        votesRemaining > 0 ? `Te quedan ${votesRemaining} votos. 🗳️` : "¡Gracias por votar! 🎉";
+      const activity = e.target.dataset.id;
+
+      // Evitar votos duplicados
+      if (userVotes.includes(activity)) {
+        alert("Ya has votado por esta actividad.");
+        return; // Detener la ejecución
+      }
+
+      // Calcular puntos (5, 4, 3, 2, 1)
+      const points = 6 - userVotes.length;
+
+      if (points < 1) {
+        alert("No tienes más votos disponibles.");
+        return;
+      }
+
+      // Actualizar votos en Firebase
+      const voteRef = ref(db, "votes/" + activity);
+      get(voteRef).then(snapshot => {
+        const currentPoints = snapshot.val()?.puntos || 0;
+        update(voteRef, { puntos: currentPoints + points }); // Usar update para evitar condiciones de carrera
+      });
+
+      // Actualizar estado local
+      userVotes.push(activity);
+      votesRemaining--;
+
+      // Cambiar UI
+      e.target.textContent = `Votado (${points} puntos) ✅`;
+      e.target.disabled = true;
+
+      // Animación de checkmark
+      const checkmark = e.target.nextElementSibling;
+      checkmark.style.opacity = "1";
+      setTimeout(() => {
+        checkmark.style.opacity = "0";
+      }, 1000);
+
+      // Actualizar mensaje de votos restantes
+      document.getElementById("votesRemaining").textContent = votesRemaining;
+      if (votesRemaining === 0) {
+        document.getElementById("voteMessage").textContent = "¡Gracias por votar! 🎉";
+      }
     }
 
     function updateResults() {
@@ -284,9 +318,10 @@
           .sort((a, b) => data[b].puntos - data[a].puntos)
           .forEach(activity => {
             const percentage = (data[activity].puntos / totalPoints) * 100;
+            const stars = "⭐".repeat(Math.ceil(data[activity].puntos / 10));
             resultsHTML += `
               <div>
-                <p>🔥 ${activity}: ${data[activity].puntos} puntos</p>
+                <p>🔥 ${activity}: ${data[activity].puntos} puntos ${stars}</p>
                 <div class="progress-bar">
                   <div class="progress-fill" style="width: ${percentage}%;"></div>
                 </div>
@@ -314,23 +349,28 @@
     }
 
     // Configuración de Particles.js
-    particlesJS.load('particles-js', {
-      particles: {
-        number: { value: 80, density: { enable: true, value_area: 800 } },
-        color: { value: "#ffcc00" },
-        shape: { type: "circle" },
-        opacity: { value: 0.5, random: true, anim: { enable: false } },
-        size: { value: 3, random: true, anim: { enable: false } },
-        line_linked: { enable: true, distance: 150, color: "#ffcc00", opacity: 0.4, width: 1 },
-        move: { enable: true, speed: 2, direction: "none", random: false, straight: false, out_mode: "out" }
-      },
-      interactivity: {
-        detect_on: "canvas",
-        events: { onhover: { enable: true, mode: "repulse" }, onclick: { enable: true, mode: "push" } },
-        modes: { repulse: { distance: 100, duration: 0.4 }, push: { particles_nb: 4 } }
-      },
-      retina_detect: true
-    });
+    setTimeout(() => {
+      particlesJS.load('particles-js', {
+        particles: {
+          number: { value: 80, density: { enable: true, value_area: 800 } },
+          color: { value: "#ffcc00" },
+          shape: { type: "circle" },
+          opacity: { value: 0.5, random: true, anim: { enable: false } },
+          size: { value: 3, random: true, anim: { enable: false } },
+          line_linked: { enable: true, distance: 150, color: "#ffcc00", opacity: 0.4, width: 1 },
+          move: { enable: true, speed: 2, direction: "none", random: false, straight: false, out_mode: "out" }
+        },
+        interactivity: {
+          detect_on: "canvas",
+          events: { onhover: { enable: true, mode: "repulse" }, onclick: { enable: true, mode: "push" } },
+          modes: { repulse: { distance: 100, duration: 0.4 }, push: { particles_nb: 4 } }
+        },
+        retina_detect: true
+      });
+    }, 500); // Retraso para asegurar que el script esté disponible
+
+    // Actualizar resultados al cargar la página
+    updateResults();
   </script>
 </body>
 </html>

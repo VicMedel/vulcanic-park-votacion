@@ -145,13 +145,11 @@
     let votesRemaining = 5;
     let userVotes = {};
     let userName = "";
-    let voters = JSON.parse(localStorage.getItem("voters")) || [];
-    let results = JSON.parse(localStorage.getItem("results")) || {};
 
     const themes = {
       "🌋 Volcanic Extremo (Aventura y Adrenalina)": ["Tirolesas extremas", "Muro de escalar", "Circuito de habilidades", "Puente tibetano", "Eurobungy", "Puente colgante"],
       "🎢 Volcanic Recreativo (Diversión para todos)": ["Paseo en lancha", "El árbol de los sueños", "Museo Volcán Pirata", "Deslizador de montaña", "Miradores escénicos", "Laberinto"],
-      "🚜 Volcanic Sobre Ruedas (Aventura en vehículos)": ["Go Karts", "Karts todoterreno", "Tren Jurásico", "Hummers 4x4"],
+      "TRACTOR Volcanic Sobre Ruedas (Aventura en vehículos)": ["Go Karts", "Karts todoterreno", "Tren Jurásico", "Hummers 4x4"],
       "🌿 Volcanic Natura (Naturaleza y vida animal)": ["Granja temática", "Gran castillo de las aves", "Pirámide herpetario", "Refugio de venados nobles"],
       "🎠 Volcanic Kids (Diversión para niños)": ["Mini karts", "Boat kids", "Barco Vulcano-Pirata", "Dino karts", "Tirolesa Volcanes de México"],
       "🦕 Volcanic Experiencias (Dinosaurios y Aventuras)": ["Dinosaurios animatrónicos", "Zona de fósiles", "Deslizador de montaña", "Miradores escénicos", "Hotel Volcanic", "Senderismo guiado", "Espectáculos temáticos"]
@@ -166,11 +164,13 @@
         return;
       }
 
-      if (voters.includes(userName)) {
+      const userRef = ref(db, "voters/" + userName);
+      const snapshot = await get(userRef);
+
+      if (snapshot.exists()) {
         alert("¡Ya has votado!");
       } else {
-        voters.push(userName);
-        localStorage.setItem("voters", JSON.stringify(voters));
+        await set(userRef, { voted: true });
         document.getElementById("activities").style.display = "block";
         renderActivities();
         updateVotersList();
@@ -267,9 +267,11 @@
       onValue(votersRef, (snapshot) => {
         const data = snapshot.val();
         let votersHTML = "<h3>📝 Lista de Personas que Han Votado</h3><ul>";
-        Object.keys(data).forEach(voter => {
-          votersHTML += `<li>✅ ${voter}</li>`;
-        });
+        if (data) {
+          Object.keys(data).forEach(voter => {
+            votersHTML += `<li>✅ ${voter}</li>`;
+          });
+        }
         votersHTML += "</ul>";
         document.getElementById("votersList").innerHTML = votersHTML;
       });

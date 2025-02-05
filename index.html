@@ -7,24 +7,25 @@
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background-color: #f4f4f9;
+      background-color: #1e1e2e;
+      color: #ffcc00;
       text-align: center;
     }
     .container {
       max-width: 800px;
       margin: 20px auto;
-      background: white;
+      background: #2e2e48;
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(255, 204, 0, 0.3);
     }
     .theme {
       margin-top: 20px;
       padding: 15px;
-      background: #ffcc80;
+      background: #ff8800;
       border-radius: 8px;
       font-weight: bold;
-      color: #d84315;
+      color: #fff;
     }
     .activity {
       display: flex;
@@ -32,12 +33,13 @@
       justify-content: space-between;
       margin: 10px 0;
       padding: 10px;
-      background: #fff3e0;
+      background: #333354;
       border-radius: 8px;
+      color: #fff;
     }
     .vote-button {
-      background-color: #ff7043;
-      color: white;
+      background-color: #ffcc00;
+      color: #1e1e2e;
       border: none;
       padding: 5px 10px;
       border-radius: 5px;
@@ -50,17 +52,113 @@
     .results {
       margin-top: 20px;
       font-weight: bold;
-      background: #ffee58;
+      background: #444466;
       padding: 10px;
       border-radius: 8px;
+      color: #ffcc00;
     }
     .voters-list {
       margin-top: 20px;
-      background: #dcedc8;
+      background: #ff8800;
       padding: 10px;
       border-radius: 8px;
+      color: #fff;
     }
   </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+    import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "vulcanic-dec2d.firebaseapp.com",
+      databaseURL: "https://vulcanic-dec2d-default-rtdb.firebaseio.com/",
+      projectId: "vulcanic-dec2d",
+      storageBucket: "vulcanic-dec2d.appspot.com",
+      messagingSenderId: "TU_MESSAGING_ID",
+      appId: "TU_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let votesRemaining = 5;
+    let userVotes = {};
+    let userName = "";
+
+    document.getElementById("nameForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      userName = document.getElementById("name").value.trim();
+
+      if (!userName) {
+        alert("Por favor, ingresa tu nombre.");
+        return;
+      }
+
+      const userRef = ref(db, "voters/" + userName);
+      onValue(userRef, (snapshot) => {
+        if (snapshot.exists()) {
+          alert("¡Ya has votado!");
+        } else {
+          set(userRef, { voted: true });
+          document.getElementById("activities").style.display = "block";
+          renderActivities();
+          updateVotersList();
+        }
+      });
+    });
+
+    function votar(activity) {
+      if (votesRemaining > 0) {
+        const voteRef = ref(db, "votes/" + activity);
+        update(voteRef, {
+          puntos: (userVotes[activity] || 0) + votesRemaining
+        });
+
+        userVotes[activity] = votesRemaining;
+        votesRemaining--;
+        updateResults();
+      } else {
+        alert("No tienes más votos.");
+      }
+    }
+
+    function updateResults() {
+      const resultsRef = ref(db, "votes");
+      onValue(resultsRef, (snapshot) => {
+        const data = snapshot.val();
+        let resultsHTML = "<h2>🏆 Ranking en Tiempo Real</h2>";
+        Object.keys(data).sort((a, b) => data[b].puntos - data[a].puntos).forEach(activity => {
+          const percentage = (data[activity].puntos / Math.max(...Object.values(data).map(v => v.puntos))) * 100;
+          resultsHTML += `
+            <div style='text-align: left; margin-bottom: 10px;'>
+              <p>🔥 ${activity}: ${data[activity].puntos} puntos</p>
+              <div style='background: #ddd; width: 100%; height: 20px; border-radius: 10px;'>
+                <div style='width: ${percentage}%; height: 100%; background: #ffcc00; border-radius: 10px; transition: width 0.5s;'></div>
+              </div>
+            </div>
+          `;
+        });
+        document.getElementById("results").innerHTML = resultsHTML;
+      });
+    }
+
+    function updateVotersList() {
+      const votersRef = ref(db, "voters");
+      onValue(votersRef, (snapshot) => {
+        const data = snapshot.val();
+        let votersHTML = "<h3>📝 Lista de Personas que Han Votado</h3><ul>";
+        Object.keys(data).forEach(voter => {
+          votersHTML += `<li>✅ ${voter}</li>`;
+        });
+        votersHTML += "</ul>";
+        document.getElementById("votersList").innerHTML = votersHTML;
+      });
+    }
+
+    updateResults();
+    updateVotersList();
+  </script>
 </head>
 <body>
   <header>
@@ -74,104 +172,9 @@
       <input type="text" id="name" placeholder="Escribe tu nombre" required>
       <button type="submit">Iniciar Votación</button>
     </form>
-
     <div id="activities" style="display: none;"></div>
-    <p id="voteMessage"></p>
     <div class="results" id="results"></div>
     <div class="voters-list" id="votersList"></div>
   </div>
-
-  <script>
-    const themes = {
-      "🦖 Volcanic Extremo (Aventura y Adrenalina)": ["Tirolesas extremas", "Muro de escalar", "Circuito de habilidades", "Puente tibetano", "Eurobungy", "Puente colgante"],
-      "🌋 Volcanic Recreativo (Diversión para todos)": ["Paseo en lancha", "El árbol de los sueños", "Museo Volcán Pirata", "Deslizador de montaña", "Miradores escénicos", "Laberinto"]
-    };
-
-    let votesRemaining = 5;
-    let voteValues = [5, 4, 3, 2, 1];
-    let userVotes = {};
-    let voters = JSON.parse(localStorage.getItem("voters")) || [];
-    let results = JSON.parse(localStorage.getItem("results")) || {};
-
-    document.getElementById("nameForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      let userName = document.getElementById("name").value.trim();
-      if (voters.includes(userName)) {
-        alert("Ya has votado.");
-        return;
-      }
-      voters.push(userName);
-      localStorage.setItem("voters", JSON.stringify(voters));
-      document.getElementById("activities").style.display = "block";
-      renderActivities();
-      updateVotersList();
-    });
-
-    function renderActivities() {
-      const container = document.getElementById("activities");
-      container.innerHTML = "";
-      
-      Object.keys(themes).forEach(theme => {
-        const themeDiv = document.createElement("div");
-        themeDiv.className = "theme";
-        themeDiv.textContent = theme;
-        container.appendChild(themeDiv);
-
-        themes[theme].forEach(activity => {
-          const div = document.createElement("div");
-          div.className = "activity";
-          div.innerHTML = `
-            <span>${activity}</span>
-            <button class="vote-button" data-id="${activity}">Votar</button>
-          `;
-          container.appendChild(div);
-        });
-      });
-
-      addVoteListeners();
-    }
-
-    function addVoteListeners() {
-      document.querySelectorAll(".vote-button").forEach(button => {
-        button.addEventListener("click", handleVote);
-      });
-    }
-
-    function handleVote(e) {
-      if (votesRemaining > 0) {
-        const activity = e.target.dataset.id;
-        const points = voteValues[voteValues.length - votesRemaining];
-        results[activity] = (results[activity] || 0) + points;
-        votesRemaining--;
-        e.target.textContent = `Votado (${points} puntos)`;
-        e.target.disabled = true;
-        updateVoteMessage();
-        updateResults();
-        localStorage.setItem("results", JSON.stringify(results));
-      } else {
-        alert("No tienes más votos.");
-      }
-    }
-
-    function updateVoteMessage() {
-      document.getElementById("voteMessage").textContent = votesRemaining > 0 ? `Te quedan ${votesRemaining} votos.` : "¡Gracias por votar!";
-    }
-
-    function updateResults() {
-      const resultsDiv = document.getElementById("results");
-      resultsDiv.innerHTML = "<h2>🏆 Resultados en Tiempo Real</h2>";
-      Object.keys(results).sort((a, b) => results[b] - results[a]).forEach(activity => {
-        resultsDiv.innerHTML += `<p>${activity}: ${results[activity]} puntos</p>`;
-      });
-    }
-
-    function updateVotersList() {
-      document.getElementById("votersList").innerHTML = "<h3>📝 Lista de Votantes</h3><p>" + voters.join(", ") + "</p>";
-    }
-
-    updateResults();
-    updateVotersList();
-  </script>
 </body>
 </html>
-
